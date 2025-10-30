@@ -2,10 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { 
-  MapPin, Calendar, DollarSign, Heart, Users, 
-  Clock, Coffee, Sun, Moon, UtensilsCrossed, 
-  Save, Sparkles
+import {
+  MapPin, Calendar, DollarSign, Heart, Users,
+  Clock, Coffee, Sun, Moon, UtensilsCrossed,
+  Save, Sparkles, FileDown
 } from "lucide-react";
 
 interface DayActivity {
@@ -54,15 +54,46 @@ interface ItineraryDisplayProps {
 }
 
 const ItineraryDisplay = ({ itinerary, onSave, onNew, saving }: ItineraryDisplayProps) => {
-  const TimeSlot = ({ 
-    icon: Icon, 
-    time, 
-    activity, 
-    color 
-  }: { 
-    icon: any; 
-    time: string; 
-    activity: DayActivity; 
+  // ✅ Function to export the itinerary as plain text
+  const exportAsText = () => {
+    let content = `Trip to ${itinerary.destination} (${itinerary.duration} days)\n\n`;
+    content += `Budget: ${itinerary.budget}\nStyle: ${itinerary.travelStyle}\nPace: ${itinerary.pace}\n`;
+    content += `Interests: ${itinerary.interests.join(", ")}\n`;
+    content += `Food Preferences: ${itinerary.foodPreferences.join(", ")}\n\n`;
+
+    itinerary.days.forEach((day) => {
+      content += `Day ${day.day}: ${day.title}\n`;
+      content += `  Morning: ${day.morning.activity} (${day.morning.duration}) - ${day.morning.description}\n`;
+      content += `  Afternoon: ${day.afternoon.activity} (${day.afternoon.duration}) - ${day.afternoon.description}\n`;
+      content += `  Evening: ${day.evening.activity} (${day.evening.duration}) - ${day.evening.description}\n`;
+
+      if (day.restaurants && day.restaurants.length > 0) {
+        content += `  🍴 Restaurants:\n`;
+        day.restaurants.forEach((r) => {
+          content += `    - ${r.name} (${r.meal}, ${r.type}, ${r.priceRange}): ${r.description}\n`;
+        });
+      }
+
+      if (day.transportTips) content += `  🚗 Transport Tips: ${day.transportTips}\n`;
+      if (day.accommodation) content += `  🏨 Stay: ${day.accommodation}\n`;
+      content += `\n`;
+    });
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `trip-itinerary-${itinerary.destination}.txt`;
+    link.click();
+  };
+
+  // ✅ Reusable subcomponent for time slots
+  const TimeSlot = ({
+    icon: Icon,
+    activity,
+    color
+  }: {
+    icon: any;
+    activity: DayActivity;
     color: string;
   }) => (
     <div className="space-y-3">
@@ -103,7 +134,13 @@ const ItineraryDisplay = ({ itinerary, onSave, onNew, saving }: ItineraryDisplay
                 Your personalized {itinerary.duration}-day adventure
               </CardDescription>
             </div>
+
+            {/* ✅ Added Export Button here */}
             <div className="flex gap-2">
+              <Button onClick={exportAsText} variant="secondary" size="sm">
+                <FileDown className="w-4 h-4 mr-2" />
+                Export as Text
+              </Button>
               <Button onClick={onSave} disabled={saving} variant="secondary" size="sm">
                 <Save className="w-4 h-4 mr-2" />
                 {saving ? "Saving..." : "Save"}
@@ -114,6 +151,7 @@ const ItineraryDisplay = ({ itinerary, onSave, onNew, saving }: ItineraryDisplay
             </div>
           </div>
         </CardHeader>
+
         <CardContent>
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="bg-white/20 text-white">
@@ -138,7 +176,7 @@ const ItineraryDisplay = ({ itinerary, onSave, onNew, saving }: ItineraryDisplay
         </CardContent>
       </Card>
 
-      {/* Day by day itinerary */}
+      {/* Day-by-day itinerary */}
       {itinerary.days.map((day) => (
         <Card key={day.day} className="shadow-card border-0">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
@@ -146,37 +184,16 @@ const ItineraryDisplay = ({ itinerary, onSave, onNew, saving }: ItineraryDisplay
               Day {day.day}: {day.title}
             </CardTitle>
           </CardHeader>
+
           <CardContent className="pt-6 space-y-6">
-            {/* Morning */}
-            <TimeSlot 
-              icon={Coffee} 
-              time="Morning" 
-              activity={day.morning} 
-              color="gradient-peach"
-            />
-            
+            <TimeSlot icon={Coffee} activity={day.morning} color="gradient-peach" />
             <Separator />
-
-            {/* Afternoon */}
-            <TimeSlot 
-              icon={Sun} 
-              time="Afternoon" 
-              activity={day.afternoon} 
-              color="gradient-mint"
-            />
-            
+            <TimeSlot icon={Sun} activity={day.afternoon} color="gradient-mint" />
             <Separator />
-
-            {/* Evening */}
-            <TimeSlot 
-              icon={Moon} 
-              time="Evening" 
-              activity={day.evening} 
-              color="gradient-lavender"
-            />
+            <TimeSlot icon={Moon} activity={day.evening} color="gradient-lavender" />
 
             {/* Restaurants */}
-            {day.restaurants && day.restaurants.length > 0 && (
+            {day.restaurants?.length > 0 && (
               <>
                 <Separator />
                 <div className="space-y-3">
@@ -204,7 +221,6 @@ const ItineraryDisplay = ({ itinerary, onSave, onNew, saving }: ItineraryDisplay
               </>
             )}
 
-            {/* Transport tips */}
             {day.transportTips && (
               <>
                 <Separator />
@@ -215,7 +231,6 @@ const ItineraryDisplay = ({ itinerary, onSave, onNew, saving }: ItineraryDisplay
               </>
             )}
 
-            {/* Accommodation */}
             {day.accommodation && (
               <>
                 <Separator />
